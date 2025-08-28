@@ -1,7 +1,7 @@
 [wokwi]
 version = 1
-firmware = 'build/app-template.bin'
-elf = 'build/app-template.elf'
+firmware = 'build/squatch.bin'
+elf = 'build/squathc.elf'
 
 [[wokwi.parts]]
 type = 'wokwi-esp32-s2'

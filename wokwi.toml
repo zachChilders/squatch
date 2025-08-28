@@ -1,0 +1,11 @@
+[wokwi]
+version = 1
+firmware = 'build/app-template.bin'
+elf = 'build/app-template.elf'
+
+[[wokwi.parts]]
+type = 'wokwi-esp32-s2'
+id = 'esp'
+top = 0
+left = 0
+attrs = { }

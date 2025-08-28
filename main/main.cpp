@@ -1,15 +1,18 @@
-#include <stdio.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "driver/i2c.h"
-#include "esp_log.h"
+#include "hal/gpio_types.h"
+
+extern "C" {
+    #include "freertos/FreeRTOS.h"
+    #include "freertos/task.h"
+    #include "driver/i2c.h"
+    #include "esp_log.h"
+}
 
 static const char *TAG = "IMU_APP";
 
 // MPU6050 I2C Configuration
 #define I2C_MASTER_SCL_IO           5        /*!< GPIO number used for I2C master clock */
 #define I2C_MASTER_SDA_IO           4        /*!< GPIO number used for I2C master data  */
-#define I2C_MASTER_NUM              0        /*!< I2C master i2c port number, the number of i2c peripheral interfaces available will depend on the chip */
+#define I2C_MASTER_NUM              I2C_NUM_0        /*!< I2C master i2c port number, the number of i2c peripheral interfaces available will depend on the chip */
 #define I2C_MASTER_FREQ_HZ          400000   /*!< I2C master clock frequency */
 #define I2C_MASTER_TX_BUF_DISABLE   0        /*!< I2C master doesn't need buffer */
 #define I2C_MASTER_RX_BUF_DISABLE   0        /*!< I2C master doesn't need buffer */
@@ -26,24 +29,25 @@ static const char *TAG = "IMU_APP";
  * @brief Initialize I2C master
  */
 static esp_err_t i2c_master_init(void)
-{
-    int i2c_master_port = I2C_MASTER_NUM;
-
+{   
     i2c_config_t conf = {
         .mode = I2C_MODE_MASTER,
         .sda_io_num = I2C_MASTER_SDA_IO,
-        .sda_pullup_en = GPIO_PULLUP_ENABLE,
         .scl_io_num = I2C_MASTER_SCL_IO,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE,
         .scl_pullup_en = GPIO_PULLUP_ENABLE,
-        .master.clk_speed = I2C_MASTER_FREQ_HZ,
+        .master = {
+            .clk_speed = I2C_MASTER_FREQ_HZ,
+        },
+        .clk_flags = 0,
     };
 
-    esp_err_t err = i2c_param_config(i2c_master_port, &conf);
+    esp_err_t err = i2c_param_config(I2C_MASTER_NUM, &conf);
     if (err != ESP_OK) {
         return err;
     }
 
-    return i2c_driver_install(i2c_master_port, conf.mode, I2C_MASTER_RX_BUF_DISABLE, I2C_MASTER_TX_BUF_DISABLE, 0);
+    return i2c_driver_install(I2C_MASTER_NUM, conf.mode, I2C_MASTER_RX_BUF_DISABLE, I2C_MASTER_TX_BUF_DISABLE, 0);
 }
 
 /**
@@ -116,23 +120,23 @@ static esp_err_t mpu6050_read_data(int16_t *accel_x, int16_t *accel_y, int16_t *
     }
 
     // Parse accelerometer data (2g range, 16384 LSB/g)
-    *accel_x = (int16_t)((data[0] << 8) | data[1]);
-    *accel_y = (int16_t)((data[2] << 8) | data[3]);
-    *accel_z = (int16_t)((data[4] << 8) | data[5]);
+    *accel_x = static_cast<int16_t>((data[0] << 8) | data[1]);
+    *accel_y = static_cast<int16_t>((data[2] << 8) | data[3]);
+    *accel_z = static_cast<int16_t>((data[4] << 8) | data[5]);
 
     // Skip temperature data (data[6], data[7])
 
     // Parse gyroscope data (250°/s range, 131 LSB/°/s)
-    *gyro_x = (int16_t)((data[8] << 8) | data[9]);
-    *gyro_y = (int16_t)((data[10] << 8) | data[11]);
-    *gyro_z = (int16_t)((data[12] << 8) | data[13]);
+    *gyro_x = static_cast<int16_t>((data[8] << 8) | data[9]);
+    *gyro_y = static_cast<int16_t>((data[10] << 8) | data[11]);
+    *gyro_z = static_cast<int16_t>((data[12] << 8) | data[13]);
 
     return ESP_OK;
 }
 
-void app_main(void)
+extern "C" void app_main(void)
 {
-    ESP_LOGI(TAG, "Starting IMU application");
+    ESP_LOGI(TAG, "Starting Squatch Sensor Package");
 
     // Initialize I2C
     ESP_ERROR_CHECK(i2c_master_init());
@@ -144,18 +148,18 @@ void app_main(void)
     int16_t accel_x, accel_y, accel_z;
     int16_t gyro_x, gyro_y, gyro_z;
 
-    while (1) {
+    while (true) {
         esp_err_t ret = mpu6050_read_data(&accel_x, &accel_y, &accel_z, &gyro_x, &gyro_y, &gyro_z);
         
         if (ret == ESP_OK) {
             // Convert raw values to meaningful units
-            float accel_x_g = accel_x / 16384.0;
-            float accel_y_g = accel_y / 16384.0;
-            float accel_z_g = accel_z / 16384.0;
+            float accel_x_g = accel_x / 16384.0f;
+            float accel_y_g = accel_y / 16384.0f;
+            float accel_z_g = accel_z / 16384.0f;
             
-            float gyro_x_dps = gyro_x / 131.0;
-            float gyro_y_dps = gyro_y / 131.0;
-            float gyro_z_dps = gyro_z / 131.0;
+            float gyro_x_dps = gyro_x / 131.0f;
+            float gyro_y_dps = gyro_y / 131.0f;
+            float gyro_z_dps = gyro_z / 131.0f;
 
             ESP_LOGI(TAG, "Accel: X=%.2fg, Y=%.2fg, Z=%.2fg", accel_x_g, accel_y_g, accel_z_g);
             ESP_LOGI(TAG, "Gyro:  X=%.2f°/s, Y=%.2f°/s, Z=%.2f°/s", gyro_x_dps, gyro_y_dps, gyro_z_dps);

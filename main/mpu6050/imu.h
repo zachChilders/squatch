@@ -24,6 +24,13 @@ struct IMUData {
   float temperature;
 };
 
+/**
+ * @brief Read from MPU6050 register
+ * @param reg_addr Register address to read from
+ * @param data Pointer to buffer to store read data
+ * @param len Number of bytes to read
+ * @return ESP_OK on success, error code on failure
+ */
 static esp_err_t mpu6050_register_read_raw(uint8_t reg_addr, uint8_t *data, size_t len) {
   return i2c_master_write_read_device(
       I2C_MASTER_NUM, MPU6050_ADDR, &reg_addr, 1, data, len,
@@ -63,7 +70,7 @@ static esp_err_t mpu6050_register_write_byte(uint8_t reg_addr, uint8_t data) {
 }
 
 /**
- * @brief Read accelerometer and gyroscope data using std::expected
+ * @brief Read accelerometer, gyroscope, and temperature data using std::expected
  * @return std::expected containing IMUData on success, or esp_err_t on failure
  */
 static std::expected<IMUData, esp_err_t> mpu6050_read_imu_data() {
@@ -94,33 +101,33 @@ static std::expected<IMUData, esp_err_t> mpu6050_read_imu_data() {
 }
 
 /**
- * @brief Initialize MPU6050
+ * @brief Initialize MPU6050 using std::expected
+ * @param TAG Log tag
+ * @return std::expected containing void on success, or esp_err_t on failure
  */
- static esp_err_t mpu6050_init(const char *TAG) {
-    esp_err_t ret;
-    uint8_t who_am_i;
-  
-    // Check WHO_AM_I register
-    ret = mpu6050_register_read_raw(MPU6050_WHO_AM_I, &who_am_i, 1);
-    if (ret != ESP_OK) {
-      ESP_LOGE(TAG, "Failed to read WHO_AM_I register");
-      return ret;
-    }
-  
-    ESP_LOGI(TAG, "WHO_AM_I: 0x%02X", who_am_i);
-  
-    if (who_am_i != 0x68) {
-      ESP_LOGE(TAG, "MPU6050 not found, WHO_AM_I: 0x%02X", who_am_i);
-      return ESP_ERR_NOT_FOUND;
-    }
-  
-    // Wake up MPU6050
-    ret = mpu6050_register_write_byte(MPU6050_PWR_MGMT_1, 0x00);
-    if (ret != ESP_OK) {
-      ESP_LOGE(TAG, "Failed to wake up MPU6050");
-      return ret;
-    }
-  
-    ESP_LOGI(TAG, "MPU6050 initialized successfully");
-    return ESP_OK;
-  }
+ static std::expected<void, esp_err_t> mpu6050_init(const char *TAG) {
+   // Check WHO_AM_I register
+   auto who_am_i_result = mpu6050_register_read<1>(MPU6050_WHO_AM_I);
+   if (!who_am_i_result) {
+     ESP_LOGE(TAG, "Failed to read WHO_AM_I register");
+     return std::unexpected(who_am_i_result.error());
+   }
+ 
+   uint8_t who_am_i = who_am_i_result.value()[0];
+   ESP_LOGI(TAG, "WHO_AM_I: 0x%02X", who_am_i);
+ 
+   if (who_am_i != 0x68) {
+     ESP_LOGE(TAG, "MPU6050 not found, WHO_AM_I: 0x%02X", who_am_i);
+     return std::unexpected(ESP_ERR_NOT_FOUND);
+   }
+ 
+   // Wake up MPU6050
+   esp_err_t ret = mpu6050_register_write_byte(MPU6050_PWR_MGMT_1, 0x00);
+   if (ret != ESP_OK) {
+     ESP_LOGE(TAG, "Failed to wake up MPU6050");
+     return std::unexpected(ret);
+   }
+ 
+   ESP_LOGI(TAG, "MPU6050 initialized successfully");
+   return {};
+ }

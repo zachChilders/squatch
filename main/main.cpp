@@ -1,11 +1,12 @@
-#include "hal/gpio_types.h"
-
 extern "C" {
     #include "freertos/FreeRTOS.h"
     #include "freertos/task.h"
+    #include "esp_log.h"
 }
 
 #include "mpu6050/imu.h"
+
+static const char *TAG = "SQUATCH";
 
 extern "C" void app_main(void)
 {
@@ -16,7 +17,7 @@ extern "C" void app_main(void)
     ESP_LOGI(TAG, "I2C initialized successfully");
 
     // Initialize MPU6050
-    ESP_ERROR_CHECK(mpu6050_init());
+    ESP_ERROR_CHECK(mpu6050_init(TAG));
 
     int16_t accel_x, accel_y, accel_z;
     int16_t gyro_x, gyro_y, gyro_z;

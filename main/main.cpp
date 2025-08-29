@@ -7,7 +7,6 @@ extern "C" {
 
 #include "mpu6050/imu.h"
 
-
 extern "C" void app_main(void)
 {
     ESP_LOGI(TAG, "Starting Squatch Sensor Package");

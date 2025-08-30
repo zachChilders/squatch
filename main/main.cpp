@@ -13,8 +13,9 @@ extern "C" void app_main(void) {
   ESP_ERROR_CHECK(i2c_master_init());
   ESP_LOGI(TAG, "I2C initialized successfully");
 
-  // Initialize MPU6050
-  auto init_result = mpu6050_init(TAG);
+  // Create and initialize MPU6050 instance
+  IMU imu;
+  auto init_result = imu.init(TAG);
   if (!init_result) {
     ESP_LOGE(TAG, "Failed to initialize MPU6050: %s",
              esp_err_to_name(init_result.error()));
@@ -22,7 +23,7 @@ extern "C" void app_main(void) {
   }
 
   while (true) {
-    auto result = mpu6050_read_imu_data();
+    auto result = imu.read_imu_data();
     if (!result) {
       ESP_LOGE(TAG, "Failed to read IMU data: %s",
                esp_err_to_name(result.error()));

@@ -16,13 +16,6 @@
       "top": 96,
       "left": 288,
       "attrs": {}
-    },
-    {
-      "type": "wokwi-arduino-nano",
-      "id": "gnss_sim",
-      "top": 96,
-      "left": 480,
-      "attrs": {}
     }
   ],
   "connections": [
@@ -31,11 +24,7 @@
     ["imu1:VCC", "esp:3V3", "red", []],
     ["imu1:GND", "esp:GND.1", "black", []],
     ["imu1:SCL", "esp:5", "green", []],
-    ["imu1:SDA", "esp:4", "blue", []],
-    ["gnss_sim:TX", "esp:18", "yellow", []],
-    ["gnss_sim:RX", "esp:17", "orange", []],
-    ["gnss_sim:5V", "esp:5V", "red", []],
-    ["gnss_sim:GND", "esp:GND.2", "black", []]
+    ["imu1:SDA", "esp:4", "blue", []]
   ],
   "dependencies": {}
 }

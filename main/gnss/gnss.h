@@ -3,7 +3,6 @@
 #include <expected>
 #include <memory>
 #include <cstdint>
-#include "esp_err.h"
 #include "driver/uart.h"
 
 /**

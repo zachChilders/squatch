@@ -1,0 +1,204 @@
+#include "uart.h"
+#include <cstring>
+#include "esp_log.h"
+#include "driver/gpio.h"
+
+static const char* TAG = "GNSS_UART";
+
+namespace gnss {
+
+UARTPort::UARTPort(
+    uart_port_t port,
+    int tx_pin,
+    int rx_pin,
+    uint32_t baud_rate,
+    size_t rx_buffer_size,
+    size_t tx_buffer_size
+) : port_(port),
+    tx_pin_(tx_pin),
+    rx_pin_(rx_pin),
+    baud_rate_(baud_rate),
+    rx_buffer_size_(rx_buffer_size),
+    tx_buffer_size_(tx_buffer_size) {
+}
+
+UARTPort::~UARTPort() {
+    if (initialized_) {
+        uart_driver_delete(port_);
+        ESP_LOGI(TAG, "UART port %d cleaned up", port_);
+    }
+}
+
+UARTPort::UARTPort(UARTPort&& other) noexcept 
+    : port_(other.port_),
+      tx_pin_(other.tx_pin_),
+      rx_pin_(other.rx_pin_),
+      baud_rate_(other.baud_rate_),
+      rx_buffer_size_(other.rx_buffer_size_),
+      tx_buffer_size_(other.tx_buffer_size_),
+      initialized_(other.initialized_) {
+    other.initialized_ = false;
+}
+
+UARTPort& UARTPort::operator=(UARTPort&& other) noexcept {
+    if (this != &other) {
+        if (initialized_) {
+            uart_driver_delete(port_);
+        }
+        
+        port_ = other.port_;
+        tx_pin_ = other.tx_pin_;
+        rx_pin_ = other.rx_pin_;
+        baud_rate_ = other.baud_rate_;
+        rx_buffer_size_ = other.rx_buffer_size_;
+        tx_buffer_size_ = other.tx_buffer_size_;
+        initialized_ = other.initialized_;
+        
+        other.initialized_ = false;
+    }
+    return *this;
+}
+
+std::expected<void, esp_err_t> UARTPort::init() {
+    if (initialized_) {
+        return std::unexpected(ESP_ERR_INVALID_STATE);
+    }
+    
+    uart_config_t uart_config = {
+        .baud_rate = static_cast<int>(baud_rate_),
+        .data_bits = UART_DATA_8_BITS,
+        .parity = UART_PARITY_DISABLE,
+        .stop_bits = UART_STOP_BITS_1,
+        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+        .rx_flow_ctrl_thresh = 122,
+        .source_clk = UART_SCLK_APB,
+    };
+    
+    esp_err_t ret = uart_param_config(port_, &uart_config);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to configure UART parameters: %s", esp_err_to_name(ret));
+        return std::unexpected(ret);
+    }
+    
+    ret = uart_set_pin(port_, tx_pin_, rx_pin_, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to set UART pins: %s", esp_err_to_name(ret));
+        return std::unexpected(ret);
+    }
+    
+    ret = uart_driver_install(port_, rx_buffer_size_, tx_buffer_size_, 0, NULL, 0);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to install UART driver: %s", esp_err_to_name(ret));
+        return std::unexpected(ret);
+    }
+    
+    initialized_ = true;
+    ESP_LOGI(TAG, "UART port %d initialized: TX=%d, RX=%d, baud=%lu", 
+             port_, tx_pin_, rx_pin_, baud_rate_);
+    
+    return {};
+}
+
+std::expected<size_t, esp_err_t> UARTPort::read(
+    uint8_t* buffer,
+    size_t length,
+    uint32_t timeout_ms
+) {
+    if (!initialized_) {
+        return std::unexpected(ESP_ERR_INVALID_STATE);
+    }
+    
+    TickType_t timeout_ticks = timeout_ms / portTICK_PERIOD_MS;
+    int bytes_read = uart_read_bytes(port_, buffer, length, timeout_ticks);
+    
+    if (bytes_read < 0) {
+        ESP_LOGE(TAG, "UART read error");
+        return std::unexpected(ESP_FAIL);
+    }
+    
+    return static_cast<size_t>(bytes_read);
+}
+
+std::expected<size_t, esp_err_t> UARTPort::write(
+    const uint8_t* data,
+    size_t length
+) {
+    if (!initialized_) {
+        return std::unexpected(ESP_ERR_INVALID_STATE);
+    }
+    
+    int bytes_written = uart_write_bytes(port_, data, length);
+    
+    if (bytes_written < 0) {
+        ESP_LOGE(TAG, "UART write error");
+        return std::unexpected(ESP_FAIL);
+    }
+    
+    return static_cast<size_t>(bytes_written);
+}
+
+std::expected<size_t, esp_err_t> UARTPort::read_sentence(
+    char* buffer,
+    size_t buffer_size,
+    uint32_t timeout_ms
+) {
+    if (!initialized_) {
+        return std::unexpected(ESP_ERR_INVALID_STATE);
+    }
+    
+    size_t pos = 0;
+    uint32_t start_time = xTaskGetTickCount() * portTICK_PERIOD_MS;
+    
+    while (pos < buffer_size - 1) {
+        uint32_t elapsed = (xTaskGetTickCount() * portTICK_PERIOD_MS) - start_time;
+        if (elapsed >= timeout_ms) {
+            return std::unexpected(ESP_ERR_TIMEOUT);
+        }
+        
+        uint8_t byte;
+        auto result = read(&byte, 1, 100);
+        if (!result) {
+            if (result.error() == ESP_ERR_TIMEOUT) {
+                continue;
+            }
+            return std::unexpected(result.error());
+        }
+        
+        if (result.value() == 0) {
+            continue;
+        }
+        
+        buffer[pos++] = static_cast<char>(byte);
+        
+        // Check for end of NMEA sentence
+        if (pos >= 2 && buffer[pos-2] == '\r' && buffer[pos-1] == '\n') {
+            buffer[pos] = '\0';
+            return pos;
+        }
+        
+        // Also handle just \n
+        if (byte == '\n') {
+            buffer[pos] = '\0';
+            return pos;
+        }
+    }
+    
+    return std::unexpected(ESP_ERR_NO_MEM);
+}
+
+std::expected<size_t, esp_err_t> UARTPort::available() const {
+    if (!initialized_) {
+        return std::unexpected(ESP_ERR_INVALID_STATE);
+    }
+    
+    size_t available_bytes = 0;
+    esp_err_t ret = uart_get_buffered_data_len(port_, &available_bytes);
+    
+    if (ret != ESP_OK) {
+        return std::unexpected(ret);
+    }
+    
+    return available_bytes;
+}
+
+} // namespace gnss

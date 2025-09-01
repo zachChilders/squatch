@@ -75,3 +75,6 @@ For any changes:
 4. Test with hardware (`idf.py flash monitor`) or Wokwi simulation if possible
 5. Ensure consistent std::expected error handling patterns
 6. Follow project naming and documentation conventions
+## Sessions System Behaviors
+
+@CLAUDE.sessions.md

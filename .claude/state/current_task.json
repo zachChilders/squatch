@@ -1,0 +1,6 @@
+{
+  "task": "m-implement-neo-m8n-gnss",
+  "branch": "feature/implement-neo-m8n-gnss",
+  "services": ["main", "gnss", "wokwi-simulation"],
+  "updated": "2025-08-31"
+}

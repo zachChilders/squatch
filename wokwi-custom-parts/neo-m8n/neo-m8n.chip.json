@@ -1,0 +1,6 @@
+{
+  "name": "neo-m8n",
+  "author": "Squatch Project",
+  "targets": ["rp2040", "esp32", "esp32s2", "esp32s3", "esp32c3"],
+  "firmware": "neo-m8n.chip.c"
+}

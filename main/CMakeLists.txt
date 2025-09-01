@@ -2,7 +2,10 @@
 set(COMPONENT_REQUIRES driver)
 set(COMPONENT_PRIV_REQUIRES )
 
-set(COMPONENT_SRCS "main.cpp")
+set(COMPONENT_SRCS "main.cpp" 
+                   "gnss/gnss.cpp"
+                   "gnss/uart.cpp" 
+                   "gnss/nmea.cpp")
 set(COMPONENT_ADD_INCLUDEDIRS "")
 
 register_component()

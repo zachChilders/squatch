@@ -1,0 +1,30 @@
+{
+  "name": "NEO-M8N GNSS Module",
+  "description": "u-blox NEO-M8N GPS/GNSS receiver module with UART interface",
+  "docs": "https://www.u-blox.com/en/product/neo-m8-series",
+  "author": "Squatch Project",
+  "pins": [
+    { "name": "VCC", "x": 0, "y": 8, "signals": [{ "type": "power", "edge": "left" }] },
+    { "name": "RX", "x": 0, "y": 24, "signals": [{ "type": "digital", "edge": "left" }] },
+    { "name": "TX", "x": 0, "y": 40, "signals": [{ "type": "digital", "edge": "left" }] },
+    { "name": "GND", "x": 0, "y": 56, "signals": [{ "type": "power", "edge": "left" }] }
+  ],
+  "controls": [
+    {
+      "id": "led",
+      "x": 36,
+      "y": 8,
+      "type": "led",
+      "color": "blue",
+      "label": "FIX"
+    }
+  ],
+  "display": [
+    { "type": "rect", "x": 8, "y": 0, "width": 48, "height": 64, "fill": "#2E7D32" },
+    { "type": "text", "x": 32, "y": 20, "text": "NEO", "color": "white", "fontSize": 8 },
+    { "type": "text", "x": 32, "y": 32, "text": "M8N", "color": "white", "fontSize": 8 },
+    { "type": "text", "x": 32, "y": 48, "text": "GPS", "color": "white", "fontSize": 6 }
+  ],
+  "width": 64,
+  "height": 64
+}

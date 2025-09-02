@@ -4,6 +4,7 @@ extern "C" {
 
 #include "imu/imu.h"
 #include "gnss/gnss.h"
+#include "logging/sensor_logger.h"
 
 static const char *TAG = "SQUATCH";
 
@@ -33,6 +34,9 @@ extern "C" void app_main(void) {
     return;
   }
 
+  // Create sensor logger with dual output mode
+  logging::SensorLogger logger(logging::SensorLogger::OutputMode::DUAL_OUTPUT);
+
   while (true) {
     // Read IMU data
     auto imu_result = imu.read_imu_data();
@@ -40,12 +44,7 @@ extern "C" void app_main(void) {
       ESP_LOGE(TAG, "Failed to read IMU data: %s",
                esp_err_to_name(imu_result.error()));
     } else {
-      auto imu_data = imu_result.value();
-      ESP_LOGI(TAG, "Accel: X=%.2fg, Y=%.2fg, Z=%.2fg", imu_data.accel.x,
-               imu_data.accel.y, imu_data.accel.z);
-      ESP_LOGI(TAG, "Gyro:  X=%.2f°/s, Y=%.2f°/s, Z=%.2f°/s", imu_data.gyro.x,
-               imu_data.gyro.y, imu_data.gyro.z);
-      ESP_LOGI(TAG, "Temp: %.2f°C", imu_data.temperature);
+      logger.log_imu_data(imu_result.value());
     }
 
     // Read GNSS data
@@ -54,16 +53,7 @@ extern "C" void app_main(void) {
       ESP_LOGE(TAG, "Failed to read GNSS data: %s",
                esp_err_to_name(gnss_result.error()));
     } else {
-      auto gnss_data = gnss_result.value();
-      if (gnss_data.fix_valid) {
-        ESP_LOGI(TAG, "GPS: Lat=%.6f°, Lon=%.6f°, Alt=%.1fm, Sats=%d", 
-                 gnss_data.latitude, gnss_data.longitude, 
-                 gnss_data.altitude, gnss_data.satellites);
-        ESP_LOGI(TAG, "GPS: Time=%06lu, Date=%06lu, HDOP=%.2f",
-                 gnss_data.timestamp, gnss_data.date, gnss_data.hdop);
-      } else {
-        ESP_LOGI(TAG, "GPS: No valid fix (Sats=%d)", gnss_data.satellites);
-      }
+      logger.log_gnss_data(gnss_result.value());
     }
 
     vTaskDelay(1000 / portTICK_PERIOD_MS);

@@ -1,6 +1,6 @@
 {
-  "task": "m-implement-neo-m8n-gnss",
-  "branch": "feature/implement-neo-m8n-gnss",
-  "services": ["main", "gnss", "wokwi-simulation"],
-  "updated": "2025-08-31"
+  "task": "m-implement-ros-sensor-integration",
+  "branch": "feature/implement-ros-sensor-integration",
+  "services": ["main", "imu", "gnss", "ros-communication", "networking"],
+  "updated": "2025-09-01"
 }

@@ -1,7 +1,7 @@
 ---
 task: [prefix]-[descriptive-name]
 branch: feature/[name]|fix/[name]|experiment/[name]|none
-status: pending|in-progress|completed|blocked
+status: in-progress
 created: YYYY-MM-DD
 modules: [list of services/modules involved]
 ---

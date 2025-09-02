@@ -78,3 +78,5 @@ For any changes:
 ## Sessions System Behaviors
 
 @CLAUDE.sessions.md
+- use ./scripts/build.sh to build the project
+- remember how to build the project

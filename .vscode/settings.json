@@ -1,17 +1,16 @@
 {
   "idf.pythonInstallPath": "/opt/homebrew/bin/python3",
   "idf.openOcdConfigs": [
-    "interface/ftdi/esp_ftdi.cfg",
-    "target/esp32s2.cfg"
+    "board/esp32-bridge.cfg"
   ],
   "idf.flashType": "UART",
   "idf.customExtraVars": {
-    "IDF_TARGET": "esp32s2"
+    "IDF_TARGET": "esp32"
   },
   "clangd.path": "/Users/zach/.espressif/tools/esp-clang/esp-19.1.2_20250312/esp-clang/bin/clangd",
   "clangd.arguments": [
     "--background-index",
-    "--query-driver=/Users/zach/.espressif/tools/xtensa-esp-elf/esp-14.2.0_20241119/xtensa-esp-elf/bin/xtensa-esp32s2-elf-gcc",
+    "--query-driver=/Users/zach/.espressif/tools/xtensa-esp-elf/esp-14.2.0_20241119/xtensa-esp-elf/bin/xtensa-esp32-elf-gcc",
     "--compile-commands-dir=/Users/zach/src/squatch/build"
   ],
   "idf.port": "/dev/tty.debug-console"

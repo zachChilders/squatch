@@ -4,7 +4,12 @@
 #include <string_view>
 #include <cstdint>
 #include "esp_err.h"
+
+#ifdef CONFIG_GNSS_MOCK
+#include "uart_mock.h"
+#else
 #include "driver/uart.h"
+#endif
 
 /**
  * @brief UART communication wrapper for GNSS module

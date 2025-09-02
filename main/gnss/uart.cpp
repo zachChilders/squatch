@@ -3,6 +3,10 @@
 #include "esp_log.h"
 #include "driver/gpio.h"
 
+#ifdef CONFIG_GNSS_MOCK
+#include "uart_mock.h"
+#endif
+
 static const char* TAG = "GNSS_UART";
 
 namespace gnss {
@@ -64,6 +68,13 @@ std::expected<void, esp_err_t> UARTPort::init() {
         return std::unexpected(ESP_ERR_INVALID_STATE);
     }
     
+#ifdef CONFIG_GNSS_MOCK
+    // Mock initialization - no real UART setup
+    initialized_ = true;
+    ESP_LOGI(TAG, "UART port %d initialized (MOCK): TX=%d, RX=%d, baud=%lu", 
+             port_, tx_pin_, rx_pin_, baud_rate_);
+    return {};
+#else
     uart_config_t uart_config = {
         .baud_rate = static_cast<int>(baud_rate_),
         .data_bits = UART_DATA_8_BITS,
@@ -93,6 +104,7 @@ std::expected<void, esp_err_t> UARTPort::init() {
     }
     
     initialized_ = true;
+#endif
     ESP_LOGI(TAG, "UART port %d initialized: TX=%d, RX=%d, baud=%lu", 
              port_, tx_pin_, rx_pin_, baud_rate_);
     
@@ -108,6 +120,46 @@ std::expected<size_t, esp_err_t> UARTPort::read(
         return std::unexpected(ESP_ERR_INVALID_STATE);
     }
     
+#ifdef CONFIG_GNSS_MOCK
+    // Mock NMEA data - generate realistic GPS sentences
+    static std::string current_sentence;
+    static size_t sentence_pos = 0;
+    static uint32_t last_sentence_time = 0;
+    
+    uint32_t current_time = esp_timer_get_time() / 1000;
+    
+    // Generate new NMEA sentence every 1000ms
+    if (current_time - last_sentence_time >= 1000 || current_sentence.empty()) {
+        // Alternate between GGA and RMC sentences using mock generators
+        static bool send_gga = true;
+        if (send_gga) {
+            current_sentence = generate_gga_sentence();
+        } else {
+            current_sentence = generate_rmc_sentence();
+        }
+        send_gga = !send_gga;
+        
+        sentence_pos = 0;
+        last_sentence_time = current_time;
+    }
+    
+    // Copy available data to buffer
+    size_t available = current_sentence.length() - sentence_pos;
+    size_t to_copy = std::min(length, available);
+    
+    if (to_copy > 0) {
+        memcpy(buffer, current_sentence.data() + sentence_pos, to_copy);
+        sentence_pos += to_copy;
+        
+        // Reset when sentence is complete
+        if (sentence_pos >= current_sentence.length()) {
+            current_sentence.clear();
+            sentence_pos = 0;
+        }
+    }
+    
+    return to_copy;
+#else
     TickType_t timeout_ticks = timeout_ms / portTICK_PERIOD_MS;
     int bytes_read = uart_read_bytes(port_, buffer, length, timeout_ticks);
     
@@ -117,6 +169,7 @@ std::expected<size_t, esp_err_t> UARTPort::read(
     }
     
     return static_cast<size_t>(bytes_read);
+#endif
 }
 
 std::expected<size_t, esp_err_t> UARTPort::write(
@@ -191,6 +244,18 @@ std::expected<size_t, esp_err_t> UARTPort::available() const {
         return std::unexpected(ESP_ERR_INVALID_STATE);
     }
     
+#ifdef CONFIG_GNSS_MOCK
+    // Mock data availability - simulate having NMEA data every 1000ms
+    static uint32_t last_check = 0;
+    uint32_t current_time = esp_timer_get_time() / 1000;
+    
+    if (current_time - last_check >= 1000) {
+        last_check = current_time;
+        return 80;  // Typical NMEA sentence length
+    }
+    return 0;  // No new data available yet
+#else
+    // Use real UART driver
     size_t available_bytes = 0;
     esp_err_t ret = uart_get_buffered_data_len(port_, &available_bytes);
     
@@ -199,6 +264,7 @@ std::expected<size_t, esp_err_t> UARTPort::available() const {
     }
     
     return available_bytes;
+#endif
 }
 
 } // namespace gnss

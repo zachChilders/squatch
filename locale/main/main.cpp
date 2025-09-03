@@ -46,31 +46,27 @@ extern "C" void app_main(void) {
   while (true) {
     // Read IMU data
     IMUData imu_data{};
-    bool imu_valid = false;
     auto imu_result = imu.read_imu_data();
     if (!imu_result) {
       ESP_LOGE(TAG, "Failed to read IMU data: %s",
                esp_err_to_name(imu_result.error()));
     } else {
       imu_data = imu_result.value();
-      imu_valid = true;
     }
 
     // Read GNSS data
     gnss::GNSSData gnss_data{};
-    bool gnss_valid = false;
     auto gnss_result = gnss_module.read();
     if (!gnss_result) {
       ESP_LOGE(TAG, "Failed to read GNSS data: %s",
                esp_err_to_name(gnss_result.error()));
     } else {
       gnss_data = gnss_result.value();
-      gnss_valid = true;
     }
 
     // Log structured sensor data
-    logging::IMUModel imu_model = logging::create_imu_model(imu_data, imu_valid);
-    logging::GNSSModel gnss_model = logging::create_gnss_model(gnss_data, gnss_valid);
+    logging::IMUModel imu_model = logging::create_imu_model(imu_data);
+    logging::GNSSModel gnss_model = logging::create_gnss_model(gnss_data);
     logging::SensorPacket packet(imu_model, gnss_model);
     auto log_result = logger.log(packet);
     if (!log_result) {

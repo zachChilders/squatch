@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstdint>
-#include "../libs/json.hpp"
+#include "../lib/json.hpp"
 #include "esp_timer.h"
 
 // Forward declarations

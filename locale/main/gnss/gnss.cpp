@@ -1,5 +1,5 @@
 #include "gnss.h"
-#include "uart.h"
+#include "../lib/uart.h"
 #include "nmea.h"
 #include <memory>
 #include "esp_log.h"

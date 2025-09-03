@@ -4,10 +4,10 @@ set(COMPONENT_PRIV_REQUIRES )
 
 set(COMPONENT_SRCS "main.cpp" 
                    "gnss/gnss.cpp"
-                   "gnss/uart.cpp" 
                    "gnss/nmea.cpp"
-                   "gnss/uart_mock.cpp"
-                   "imu/mock.cpp")
+                   "imu/mock.cpp"
+                   "lib/uart.cpp"
+                   "lib/uart_mock.cpp")
 set(COMPONENT_ADD_INCLUDEDIRS "")
 
 register_component()

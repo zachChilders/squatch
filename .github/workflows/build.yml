@@ -21,3 +21,4 @@ jobs:
       with:
         esp_idf_version: v5.1.2
         target: esp32s2
+        path: ./locale

@@ -47,18 +47,14 @@ private:
 };
 
 // Helper function implementations
-inline IMUModel create_imu_model(const IMUData& imu_data, bool is_valid) {
-    if (!is_valid) return IMUModel();
-    
+inline IMUModel create_imu_model(const IMUData& imu_data) {
     AccelModel accel(imu_data.accel.x, imu_data.accel.y, imu_data.accel.z);
     GyroModel gyro(imu_data.gyro.x, imu_data.gyro.y, imu_data.gyro.z);
-    return IMUModel(true, accel, gyro, imu_data.temperature);
+    return IMUModel(accel, gyro, imu_data.temperature);
 }
 
-inline GNSSModel create_gnss_model(const gnss::GNSSData& gnss_data, bool is_valid) {
-    if (!is_valid) return GNSSModel();
-    
-    return GNSSModel(true, gnss_data.latitude, gnss_data.longitude, gnss_data.altitude,
+inline GNSSModel create_gnss_model(const gnss::GNSSData& gnss_data) {
+    return GNSSModel(gnss_data.latitude, gnss_data.longitude, gnss_data.altitude,
                      gnss_data.satellites, gnss_data.hdop, gnss_data.fix_valid,
                      gnss_data.timestamp, gnss_data.date);
 }

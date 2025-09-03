@@ -32,19 +32,17 @@ struct GyroModel {
 
 /// @brief JSON serializable IMU data
 struct IMUModel {
-    bool valid{false};
     AccelModel accel;
     GyroModel gyro;
     float temperature{0.0f};
     
     IMUModel() = default;
-    IMUModel(bool is_valid, const AccelModel& accel_data, const GyroModel& gyro_data, float temp)
-        : valid(is_valid), accel(accel_data), gyro(gyro_data), temperature(temp) {}
+    IMUModel(const AccelModel& accel_data, const GyroModel& gyro_data, float temp)
+        : accel(accel_data), gyro(gyro_data), temperature(temp) {}
 };
 
 /// @brief JSON serializable GNSS data
 struct GNSSModel {
-    bool valid{false};
     double latitude{0.0};
     double longitude{0.0};
     float altitude{0.0f};
@@ -55,9 +53,9 @@ struct GNSSModel {
     uint32_t date{0};
     
     GNSSModel() = default;
-    GNSSModel(bool is_valid, double lat, double lon, float alt, uint8_t sats, 
+    GNSSModel(double lat, double lon, float alt, uint8_t sats, 
              float hdop_val, bool fix, uint32_t time_val, uint32_t date_val)
-        : valid(is_valid), latitude(lat), longitude(lon), altitude(alt), 
+        :latitude(lat), longitude(lon), altitude(alt), 
           satellites(sats), hdop(hdop_val), fix_valid(fix), time(time_val), date(date_val) {}
 };
 
@@ -98,7 +96,6 @@ namespace nlohmann {
     struct adl_serializer<logging::IMUModel> {
         static void to_json(json& j, const logging::IMUModel& imu) {
             j = json{
-                {"valid", imu.valid},
                 {"accel", imu.accel},
                 {"gyro", imu.gyro},
                 {"temperature", imu.temperature}
@@ -110,7 +107,6 @@ namespace nlohmann {
     struct adl_serializer<logging::GNSSModel> {
         static void to_json(json& j, const logging::GNSSModel& gnss) {
             j = json{
-                {"valid", gnss.valid},
                 {"latitude", gnss.latitude},
                 {"longitude", gnss.longitude},
                 {"altitude", gnss.altitude},

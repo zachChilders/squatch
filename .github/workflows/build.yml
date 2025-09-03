@@ -2,9 +2,9 @@ name: Build ESP32-S2 Squatch
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 
 jobs:
   build:
@@ -21,3 +21,4 @@ jobs:
       with:
         esp_idf_version: v5.1.2
         target: esp32s2
+        path: ./locale

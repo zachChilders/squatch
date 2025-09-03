@@ -2,7 +2,7 @@
 
 #ifdef CONFIG_GNSS_MOCK
 
-#include "uart_mock.h"
+#include "../lib/uart_mock.h"
 
 /**
  * @brief Predefined GNSS test scenarios for mock GPS data

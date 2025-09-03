@@ -23,3 +23,10 @@ sdkconfig.defaults.esp32s2
 # Python bytecode
 __pycache__/
 *.pyc
+
+# claude
+.claude
+.serena
+.cache
+sessions
+CLAUDE.sessions.md

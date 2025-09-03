@@ -3,7 +3,12 @@ extern "C" {
 #include "esp_log.h"
 }
 
+#ifdef CONFIG_IMU_MOCK
+#include "mock.h"
+#else
 #include "i2c.h"
+#endif
+
 #include "registers.h"
 #include <array>
 #include <expected>
@@ -102,6 +107,7 @@ public:
   }
 
 private:
+#ifndef CONFIG_IMU_MOCK
   /**
    * @brief Read from MPU6050 register (raw implementation)
    * @param reg_addr Register address to read from
@@ -146,6 +152,7 @@ private:
                                      sizeof(write_buf),
                                      I2C_MASTER_TIMEOUT_MS / portTICK_PERIOD_MS);
   }
+#endif // !CONFIG_IMU_MOCK
 
   bool initialized;
 };

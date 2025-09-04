@@ -13,6 +13,7 @@ services:
     volumes:
       - ./ros2_ws/src:/home/ros_dev/ros2_ws/src:rw
       - /dev:/dev:rw
+      - /tmp/esp_uart:/dev/esp_uart:rw
     devices:
       - /dev:/dev
     environment:

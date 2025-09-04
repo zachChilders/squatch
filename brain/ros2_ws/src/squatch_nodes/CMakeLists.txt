@@ -11,15 +11,25 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(nlohmann_json REQUIRED)
 
-# Add executables here as you create nodes
-# add_executable(example_node src/example_node.cpp)
-# ament_target_dependencies(example_node rclcpp std_msgs)
+# Include directories
+include_directories(include)
+
+# ESP Bridge Node
+add_executable(esp_bridge_node src/esp_bridge_main.cpp src/esp_bridge_node.cpp)
+ament_target_dependencies(esp_bridge_node 
+  rclcpp 
+  std_msgs 
+  geometry_msgs 
+  sensor_msgs)
+target_link_libraries(esp_bridge_node 
+  nlohmann_json::nlohmann_json)
 
 # Install executables
-# install(TARGETS
-#   example_node
-#   DESTINATION lib/${PROJECT_NAME})
+install(TARGETS
+  esp_bridge_node
+  DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

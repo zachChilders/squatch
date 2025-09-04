@@ -106,10 +106,10 @@ inline std::string StructuredLogger::colorize_json(const std::string& json_str) 
 
 inline std::expected<void, esp_err_t> StructuredLogger::log(const SensorPacket& packet) {
     nlohmann::json j = packet;
-    std::string json_output = j.dump(2);  // Pretty print with 2-space indentation
+    std::string json_output = j.dump();  // Single-line JSON
     
-    // Only colorize if outputting to a terminal
-    bool use_colors = isatty(STDOUT_FILENO);
+    // Disable colors for machine consumption
+    bool use_colors = false;
     if (use_colors) {
         json_output = colorize_json(json_output);
     }

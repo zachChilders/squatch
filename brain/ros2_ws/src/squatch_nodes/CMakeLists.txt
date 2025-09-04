@@ -11,7 +11,6 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
-find_package(Boost REQUIRED COMPONENTS system)
 find_package(nlohmann_json REQUIRED)
 
 # Include directories
@@ -25,7 +24,6 @@ ament_target_dependencies(esp_bridge_node
   geometry_msgs 
   sensor_msgs)
 target_link_libraries(esp_bridge_node 
-  ${Boost_LIBRARIES}
   nlohmann_json::nlohmann_json)
 
 # Install executables

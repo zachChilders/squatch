@@ -132,22 +132,15 @@ void ESPBridge::process_json_message(const std::string& json_line) {
         // Extract timestamp
         uint64_t esp_timestamp_us = json_data.value("timestamp", 0UL);
         
-        // Convert ESP timestamp to ROS2 timestamp
-        auto now = this->get_clock()->now();
-        
         // Process IMU data
         if (json_data.contains("imu")) {
             auto imu_msg = create_imu_message(json_data["imu"], esp_timestamp_us);
-            imu_msg.header.stamp = now;
-            imu_msg.header.frame_id = "esp_imu";
             imu_publisher_->publish(imu_msg);
         }
         
         // Process GNSS data
         if (json_data.contains("gnss")) {
             auto gnss_msg = create_gnss_message(json_data["gnss"], esp_timestamp_us);
-            gnss_msg.header.stamp = now;
-            gnss_msg.header.frame_id = "esp_gnss";
             gnss_publisher_->publish(gnss_msg);
         }
         
@@ -162,6 +155,10 @@ void ESPBridge::process_json_message(const std::string& json_line) {
 sensor_msgs::msg::Imu ESPBridge::create_imu_message(const nlohmann::json& imu_json, 
                                                    uint64_t timestamp_us) {
     sensor_msgs::msg::Imu imu_msg;
+    
+    // Set timestamp and frame
+    imu_msg.header.stamp = rclcpp::Time(timestamp_us * 1000);  // μs → ns
+    imu_msg.header.frame_id = "esp_imu";
     
     // Linear acceleration (m/s²) - ESP outputs in g, convert to m/s²
     const double G_TO_MS2 = 9.80665;
@@ -193,6 +190,10 @@ sensor_msgs::msg::Imu ESPBridge::create_imu_message(const nlohmann::json& imu_js
 sensor_msgs::msg::NavSatFix ESPBridge::create_gnss_message(const nlohmann::json& gnss_json,
                                                          uint64_t timestamp_us) {
     sensor_msgs::msg::NavSatFix gnss_msg;
+    
+    // Set timestamp and frame
+    gnss_msg.header.stamp = rclcpp::Time(timestamp_us * 1000);  // μs → ns
+    gnss_msg.header.frame_id = "esp_gnss";
     
     // Position data
     gnss_msg.latitude = gnss_json.value("latitude", 0.0);

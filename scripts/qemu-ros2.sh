@@ -1,36 +1,26 @@
 #!/bin/bash
 
-# ESP32-S2 QEMU with ROS2 UART Bridge
-# Replaces: idf.py qemu monitor
-# Provides: QEMU + TCP→PTY bridge for ROS2 container access
+# ESP32-S2 QEMU with ROS2 TCP Integration
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-ESP_PTY="/tmp/esp_uart"
 TCP_PORT=5555
 
 # Cleanup function
 cleanup() {
     echo "Cleaning up..."
-    if [ ! -z "$SOCAT_PID" ]; then
-        kill $SOCAT_PID 2>/dev/null || true
-        echo "Stopped socat bridge (PID: $SOCAT_PID)"
-    fi
     if [ ! -z "$QEMU_PID" ]; then
         kill $QEMU_PID 2>/dev/null || true
         echo "Stopped QEMU (PID: $QEMU_PID)"
     fi
-    rm -f "$ESP_PTY"
 }
 
 trap cleanup EXIT
 
 case "${1:-help}" in
     "start")
-        echo "Starting ESP32-S2 QEMU with ROS2 UART bridge..."
-        
         cd "$PROJECT_ROOT/locale"
         
         # Check if build exists
@@ -48,78 +38,29 @@ case "${1:-help}" in
         # Wait for QEMU to be ready
         sleep 3
         
-        # Start socat bridge TCP→PTY
-        echo "Starting TCP→PTY bridge: localhost:$TCP_PORT → $ESP_PTY"
-        socat pty,link="$ESP_PTY",raw tcp:localhost:$TCP_PORT &
-        SOCAT_PID=$!
-        echo "Bridge started (PID: $SOCAT_PID)"
-        
-        # Wait for PTY to be created
-        timeout=10
-        while [ ! -e "$ESP_PTY" ] && [ $timeout -gt 0 ]; do
-            sleep 1
-            ((timeout--))
-        done
-        
-        if [ -e "$ESP_PTY" ]; then
-            echo "✓ ESP UART bridge ready at: $ESP_PTY"
-            echo "✓ ROS2 container will access via: /dev/esp_uart"
-            echo ""
-            echo "ROS2 Integration Commands:"
-            echo "  cd brain && ./scripts/dev.sh build-ws"
-            echo "  ./scripts/dev.sh esp-bridge"
-            echo ""
-            echo "Monitor ESP output:"
-            echo "  cat $ESP_PTY"
-            echo ""
-            echo "Press Ctrl+C to stop QEMU and bridge..."
-            wait
-        else
-            echo "✗ Failed to create PTY at $ESP_PTY"
-            exit 1
-        fi
+        echo "✓ ESP QEMU ready on TCP port $TCP_PORT"
+        echo "Press Ctrl+C to stop QEMU..."
+        wait
         ;;
         
     "stop")
-        echo "Stopping QEMU and bridge processes..."
-        pkill -f "qemu.*tcp::$TCP_PORT" || true
-        pkill -f "socat.*$ESP_PTY" || true
-        rm -f "$ESP_PTY"
+        echo "Stopping QEMU processes..."
+        pkill -f "qemu.*tcp.*$TCP_PORT" || true
         echo "Stopped"
         ;;
         
     "status")
         echo "QEMU Process:"
-        pgrep -f "qemu.*tcp::$TCP_PORT" && echo "  ✓ QEMU running" || echo "  ✗ QEMU not running"
-        echo "Socat Bridge:"
-        pgrep -f "socat.*$ESP_PTY" && echo "  ✓ Bridge running" || echo "  ✗ Bridge not running"
-        echo "PTY Device:"
-        [ -e "$ESP_PTY" ] && echo "  ✓ $ESP_PTY exists" || echo "  ✗ $ESP_PTY missing"
-        ;;
-        
-    "monitor")
-        echo "Monitoring ESP output from $ESP_PTY..."
-        if [ -e "$ESP_PTY" ]; then
-            cat "$ESP_PTY"
-        else
-            echo "PTY not available. Run 'start' first."
-        fi
+        pgrep -f "qemu.*tcp.*$TCP_PORT" && echo "  ✓ QEMU running on TCP port $TCP_PORT" || echo "  ✗ QEMU not running"
+        echo "TCP Port:"
+        lsof -i :$TCP_PORT >/dev/null 2>&1 && echo "  ✓ Port $TCP_PORT in use" || echo "  ✗ Port $TCP_PORT not in use"
         ;;
         
     "help"|*)
-        echo "ESP32-S2 QEMU ROS2 Bridge Commands:"
-        echo "  start    - Start QEMU with TCP→PTY bridge for ROS2"
-        echo "  stop     - Stop QEMU and bridge processes"  
-        echo "  status   - Check if QEMU and bridge are running"
-        echo "  monitor  - Monitor ESP output directly"
+        echo "ESP32-S2 QEMU ROS2 TCP Integration Commands:"
+        echo "  start    - Start QEMU with TCP serial for direct ROS2 access"
+        echo "  stop     - Stop QEMU processes"  
+        echo "  status   - Check if QEMU is running and TCP port is available"
         echo ""
-        echo "Integration Workflow:"
-        echo "  1. ./scripts/qemu-ros2.sh start"
-        echo "  2. cd brain && ./scripts/dev.sh up"
-        echo "  3. ./scripts/dev.sh build-ws"
-        echo "  4. ./scripts/dev.sh esp-bridge"
-        echo ""
-        echo "Replaces: idf.py qemu monitor"
-        echo "Provides: QEMU + ROS2 UART bridge via $ESP_PTY"
         ;;
 esac

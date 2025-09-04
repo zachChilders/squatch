@@ -58,10 +58,6 @@ void ESPBridge::tcp_read_loop() {
                 continue;
             }
             
-            // Debug: show what chunks are being received
-            RCLCPP_INFO(this->get_logger(), "Received %zd bytes: [%.*s]", 
-                        bytes_read, (int)bytes_read, buffer);
-            
             // Process received data character by character to find complete JSON lines
             for (ssize_t i = 0; i < bytes_read; ++i) {
                 char c = buffer[i];

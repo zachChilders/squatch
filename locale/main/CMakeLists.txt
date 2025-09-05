@@ -3,6 +3,7 @@ set(COMPONENT_REQUIRES driver esp_timer)
 set(COMPONENT_PRIV_REQUIRES )
 
 set(COMPONENT_SRCS "main.cpp" 
+                   "tasks.cpp"
                    "gnss/gnss.cpp"
                    "gnss/nmea.cpp"
                    "imu/mock.cpp"

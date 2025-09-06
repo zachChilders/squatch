@@ -1,4 +1,4 @@
-name: Build ESP32-S2 Squatch and ROS2 Brain
+name: Build Squatch
 
 on:
   push:

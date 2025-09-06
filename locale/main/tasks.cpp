@@ -8,9 +8,10 @@ static const char *TAG = "TASKS";
 QueueHandle_t sensor_data_queue = nullptr;
 
 // Global sensor instances (thread-safe as each task owns its instance)
-static IMU* imu_instance = nullptr;
-static gnss::GNSSModule* gnss_instance = nullptr; 
-static logging::StructuredLogger* logger_instance = nullptr;
+
+static std::unique_ptr<IMU> imu_instance = std::make_unique<IMU>();
+static std::unique_ptr<gnss::GNSSModule> gnss_instance = std::make_unique<gnss::GNSSModule>();
+static std::unique_ptr<logging::StructuredLogger> logger_instance = std::make_unique<logging::StructuredLogger>();
 
 /**
  * @brief IMU polling task - reads MPU6050 at configurable interval
@@ -81,8 +82,6 @@ void logging_task(void* parameters) {
     SensorMessage message;
     IMUData latest_imu_data{};
     gnss::GNSSData latest_gnss_data{};
-    bool has_imu_data = false;
-    bool has_gnss_data = false;
     
     TickType_t last_log_time = xTaskGetTickCount();
     
@@ -95,12 +94,10 @@ void logging_task(void* parameters) {
             switch (message.type) {
                 case MessageType::IMU_DATA:
                     latest_imu_data = message.imu_data;
-                    has_imu_data = true;
                     break;
                     
                 case MessageType::GNSS_DATA:
                     latest_gnss_data = message.gnss_data;
-                    has_gnss_data = true;
                     break;
                     
                 default:
@@ -153,7 +150,6 @@ esp_err_t init_sensor_tasks() {
     ESP_LOGI(TAG, "I2C initialized successfully");
     
     // Create and initialize IMU instance
-    imu_instance = new IMU();
     auto imu_init_result = imu_instance->init(TAG);
     if (!imu_init_result) {
         ESP_LOGE(TAG, "Failed to initialize MPU6050: %s",
@@ -162,7 +158,6 @@ esp_err_t init_sensor_tasks() {
     }
     
     // Create and initialize GNSS instance
-    gnss_instance = new gnss::GNSSModule();
     auto gnss_init_result = gnss_instance->init();
     if (!gnss_init_result) {
         ESP_LOGE(TAG, "Failed to initialize GNSS: %s",
@@ -172,7 +167,7 @@ esp_err_t init_sensor_tasks() {
     ESP_LOGI(TAG, "GNSS initialized successfully");
     
     // Create and initialize structured logger
-    logger_instance = new logging::StructuredLogger();
+    logger_instance = std::make_unique<logging::StructuredLogger>();
     auto logger_init_result = logger_instance->init();
     if (!logger_init_result) {
         ESP_LOGE(TAG, "Failed to initialize logger: %s",

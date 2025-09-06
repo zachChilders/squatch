@@ -22,12 +22,13 @@ include_directories(include)
 
 # ESP Bridge Node
 add_executable(esp_bridge_node src/esp_bridge_main.cpp src/esp_bridge_node.cpp)
-ament_target_dependencies(esp_bridge_node 
-  rclcpp 
-  std_msgs 
-  geometry_msgs 
-  sensor_msgs)
-target_link_libraries(esp_bridge_node 
+target_link_libraries(esp_bridge_node PUBLIC
+  ${geometry_msgs_TARGETS}
+  ${sensor_msgs_TARGETS}
+  ${std_msgs_TARGETS}
+  rclcpp::rclcpp
+  sensor_msgs::sensor_msgs_library)
+target_link_libraries(esp_bridge_node PUBLIC
   nlohmann_json::nlohmann_json)
 
 # Install executables

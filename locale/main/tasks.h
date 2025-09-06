@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 extern "C" {
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -57,8 +59,19 @@ struct SensorMessage {
     }
 };
 
+// Custom deleter for FreeRTOS queue
+struct QueueDeleter {
+    void operator()(QueueHandle_t queue) {
+        if (queue != nullptr) {
+            vQueueDelete(queue);
+        }
+    }
+};
+
+using QueuePtr = std::unique_ptr<std::remove_pointer_t<QueueHandle_t>, QueueDeleter>;
+
 // Global queue handles (initialized in main.cpp)
-extern QueueHandle_t sensor_data_queue;
+extern QueuePtr sensor_data_queue;
 
 // Task function prototypes
 void imu_task(void* parameters);

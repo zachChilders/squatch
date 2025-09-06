@@ -9,7 +9,7 @@ extern "C" {
 static const char *TAG = "SQUATCH";
 
 extern "C" void app_main(void) {
-  ESP_LOGI(TAG, "Starting Sensor Package with FreeRTOS Task Architecture");
+  ESP_LOGI(TAG, "Starting Sensor Package");
 
   // Initialize sensor task system
   esp_err_t init_result = tasks::init_sensor_tasks();
@@ -23,7 +23,6 @@ extern "C" void app_main(void) {
   tasks::start_sensor_tasks();
   
   ESP_LOGI(TAG, "All sensor tasks started successfully");
-  ESP_LOGI(TAG, "Main task entering idle loop");
 
   // Main task idle loop - tasks are now running independently
   while (true) {

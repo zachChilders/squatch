@@ -5,7 +5,7 @@ An exploration into simulation, sensor fusion, and SLAM.
 ![Squatch Logo](static/logo.png)
 
 ## Locale
-An esp32 firmware designed to poll data from an IMU and GNSS module. Uses C++23 and logs json messages to uart (for now).  esp-idf and freertos based.
+An esp32 firmware designed to poll data from an IMU and GNSS module.  It logs json messages to uart (for now).  esp-idf and freertos based.
 
 ## Brain
 A dockerized ros2 setup.  Includes a node that reads uart messages, parses them, then inserts them into topics for processing.

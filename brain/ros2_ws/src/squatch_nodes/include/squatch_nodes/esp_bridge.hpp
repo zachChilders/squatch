@@ -7,6 +7,8 @@
 #include <string>
 #include <memory>
 #include <thread>
+#include <expected>
+#include <system_error>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -14,6 +16,18 @@
 #include <unistd.h>
 
 namespace squatch_nodes {
+
+/**
+ * @brief Error types for expected-based error handling
+ */
+enum class BridgeError {
+    SocketCreate,
+    AddressResolve, 
+    ConnectionFailed,
+    JsonParse,
+    MessageProcess,
+    TcpRead
+};
 
 /**
  * @brief ROS2 node that bridges ESP32 UART JSON output to ROS2 sensor topics
@@ -45,15 +59,16 @@ private:
     
     /**
      * @brief Attempts to open/reopen TCP connection
-     * @return true if connection successful, false otherwise
+     * @return expected with success or BridgeError
      */
-    bool connect_tcp();
+    std::expected<void, BridgeError> connect_tcp();
     
     /**
      * @brief Processes a single JSON line from ESP
      * @param json_line Raw JSON string from TCP socket
+     * @return expected with success or BridgeError
      */
-    void process_json_message(const std::string& json_line);
+    std::expected<void, BridgeError> process_json_message(const std::string& json_line);
     
     /**
      * @brief Converts ESP IMU JSON to ROS2 sensor_msgs::Imu

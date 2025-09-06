@@ -38,7 +38,8 @@ void ESPBridge::tcp_read_loop() {
     
     while (!should_stop_) {
         if (socket_fd_ < 0) {
-            if (!connect_tcp()) {
+            auto connect_result = connect_tcp();
+            if (!connect_result) {
                 RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 5000,
                                     "Failed to connect to %s:%d, retrying...", host_.c_str(), port_);
                 std::this_thread::sleep_for(RECONNECT_DELAY);
@@ -46,110 +47,93 @@ void ESPBridge::tcp_read_loop() {
             }
         }
         
-        try {
-            char buffer[TCP_BUFFER_SIZE];
+        char buffer[TCP_BUFFER_SIZE];
+        
+        ssize_t bytes_read = recv(socket_fd_, buffer, TCP_BUFFER_SIZE, 0);
             
-            ssize_t bytes_read = recv(socket_fd_, buffer, TCP_BUFFER_SIZE, 0);
-                
-            if (bytes_read <= 0) {
-                RCLCPP_ERROR(this->get_logger(), "TCP read error: %s", strerror(errno));
-                close(socket_fd_);
-                socket_fd_ = -1;
-                continue;
-            }
-            
-            // Process received data character by character to find complete JSON lines
-            for (ssize_t i = 0; i < bytes_read; ++i) {
-                char c = buffer[i];
-                if (c == '\n') {
-                    if (!line_buffer.empty()) {
-                        process_json_message(line_buffer);
-                        line_buffer.clear();
+        if (bytes_read <= 0) {
+            RCLCPP_ERROR(this->get_logger(), "TCP read error: %s", strerror(errno));
+            close(socket_fd_);
+            socket_fd_ = -1;
+            continue;
+        }
+        
+        // Process received data character by character to find complete JSON lines
+        for (ssize_t i = 0; i < bytes_read; ++i) {
+            char c = buffer[i];
+            if (c == '\n') {
+                if (!line_buffer.empty()) {
+                    auto process_result = process_json_message(line_buffer);
+                    if (!process_result) {
+                        // JSON processing failed, but continue with next message
                     }
-                } else if (c != '\r') {
-                    line_buffer += c;
+                    line_buffer.clear();
                 }
+            } else if (c != '\r') {
+                line_buffer += c;
             }
-            
-        } catch (const std::exception& e) {
-            RCLCPP_ERROR(this->get_logger(), "TCP communication exception: %s", e.what());
-            close(socket_fd_);
-            socket_fd_ = -1;
-            std::this_thread::sleep_for(RECONNECT_DELAY);
         }
     }
 }
 
-bool ESPBridge::connect_tcp() {
-    try {
-        socket_fd_ = socket(AF_INET, SOCK_STREAM, 0);
-        if (socket_fd_ < 0) {
-            RCLCPP_DEBUG(this->get_logger(), "Failed to create socket: %s", strerror(errno));
-            return false;
-        }
-        
-        struct addrinfo hints, *result;
-        memset(&hints, 0, sizeof(hints));
-        hints.ai_family = AF_INET;
-        hints.ai_socktype = SOCK_STREAM;
+std::expected<void, BridgeError> ESPBridge::connect_tcp() {
+    socket_fd_ = socket(AF_INET, SOCK_STREAM, 0);
+    if (socket_fd_ < 0) {
+        RCLCPP_DEBUG(this->get_logger(), "Failed to create socket: %s", strerror(errno));
+        return std::unexpected(BridgeError::SocketCreate);
+    }
+    
+    struct addrinfo hints, *result;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
 
-        int ret = getaddrinfo(host_.c_str(), std::to_string(port_).c_str(), &hints, &result);
-        if (ret != 0) {
-            RCLCPP_DEBUG(this->get_logger(), "getaddrinfo failed: %s", gai_strerror(ret));
-            close(socket_fd_);
-            socket_fd_ = -1;
-            return false;
-        }
-        
-        if (connect(socket_fd_, result->ai_addr, result->ai_addrlen) < 0) {
-            RCLCPP_DEBUG(this->get_logger(), "Failed to connect to %s:%d: %s", 
-                        host_.c_str(), port_, strerror(errno));
-            freeaddrinfo(result);
-            close(socket_fd_);
-            socket_fd_ = -1;
-            return false;
-        }
-        
-        freeaddrinfo(result);
-        RCLCPP_INFO(this->get_logger(), "Connected to ESP device at %s:%d", host_.c_str(), port_);
-        return true;
-        
-    } catch (const std::exception& e) {
+    int ret = getaddrinfo(host_.c_str(), std::to_string(port_).c_str(), &hints, &result);
+    if (ret != 0) {
+        RCLCPP_DEBUG(this->get_logger(), "getaddrinfo failed: %s", gai_strerror(ret));
+        close(socket_fd_);
+        socket_fd_ = -1;
+        return std::unexpected(BridgeError::AddressResolve);
+    }
+    
+    if (connect(socket_fd_, result->ai_addr, result->ai_addrlen) < 0) {
         RCLCPP_DEBUG(this->get_logger(), "Failed to connect to %s:%d: %s", 
-                    host_.c_str(), port_, e.what());
-        if (socket_fd_ >= 0) {
-            close(socket_fd_);
-            socket_fd_ = -1;
-        }
-        return false;
+                    host_.c_str(), port_, strerror(errno));
+        freeaddrinfo(result);
+        close(socket_fd_);
+        socket_fd_ = -1;
+        return std::unexpected(BridgeError::ConnectionFailed);
     }
+    
+    freeaddrinfo(result);
+    RCLCPP_INFO(this->get_logger(), "Connected to ESP device at %s:%d", host_.c_str(), port_);
+    return {};
 }
 
-void ESPBridge::process_json_message(const std::string& json_line) {
-    try {
-        auto json_data = nlohmann::json::parse(json_line);
-        
-        // Extract timestamp
-        uint64_t esp_timestamp_us = json_data.value("timestamp", 0UL);
-        
-        // Process IMU data
-        if (json_data.contains("imu")) {
-            auto imu_msg = create_imu_message(json_data["imu"], esp_timestamp_us);
-            imu_publisher_->publish(imu_msg);
-        }
-        
-        // Process GNSS data
-        if (json_data.contains("gnss")) {
-            auto gnss_msg = create_gnss_message(json_data["gnss"], esp_timestamp_us);
-            gnss_publisher_->publish(gnss_msg);
-        }
-        
-    } catch (const nlohmann::json::parse_error& e) {
+std::expected<void, BridgeError> ESPBridge::process_json_message(const std::string& json_line) {
+    auto json_data = nlohmann::json::parse(json_line, nullptr, false);
+    if (json_data.is_discarded()) {
         RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
-                            "JSON parse error: %s", e.what());
-    } catch (const std::exception& e) {
-        RCLCPP_ERROR(this->get_logger(), "Error processing ESP message: %s", e.what());
+                            "JSON parse error for line: %s", json_line.c_str());
+        return std::unexpected(BridgeError::JsonParse);
     }
+    
+    // Extract timestamp
+    uint64_t esp_timestamp_us = json_data.value("timestamp", 0UL);
+    
+    // Process IMU data
+    if (json_data.contains("imu")) {
+        auto imu_msg = create_imu_message(json_data["imu"], esp_timestamp_us);
+        imu_publisher_->publish(imu_msg);
+    }
+    
+    // Process GNSS data
+    if (json_data.contains("gnss")) {
+        auto gnss_msg = create_gnss_message(json_data["gnss"], esp_timestamp_us);
+        gnss_publisher_->publish(gnss_msg);
+    }
+    
+    return {};
 }
 
 sensor_msgs::msg::Imu ESPBridge::create_imu_message(const nlohmann::json& imu_json, 

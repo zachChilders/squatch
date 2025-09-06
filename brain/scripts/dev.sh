@@ -27,7 +27,7 @@ case "${1:-help}" in
     
   "build-ws")
     echo "Building ROS2 workspace in container..."
-    docker-compose exec ros2_brain bash -c "source /opt/ros/humble/setup.bash && colcon build"
+    docker-compose exec ros2_brain bash -c "source /opt/ros/kilted/setup.bash && colcon build"
     ;;
     
   "clean")
@@ -46,12 +46,12 @@ case "${1:-help}" in
     
   "esp-bridge")
     echo "Running ESP bridge node..."
-    docker-compose exec ros2_brain bash -c "source /opt/ros/humble/setup.bash && source ~/ros2_ws/install/setup.bash && ros2 run squatch_nodes esp_bridge_node /dev/esp_uart"
+    docker-compose exec ros2_brain bash -c "source /opt/ros/kilted/setup.bash && source ~/ros2_ws/install/setup.bash && ros2 run squatch_nodes esp_bridge_node /dev/esp_uart"
     ;;
     
   "topics")
     echo "Listing active ROS2 topics..."
-    docker-compose exec ros2_brain bash -c "source /opt/ros/humble/setup.bash && ros2 topic list"
+    docker-compose exec ros2_brain bash -c "source /opt/ros/kilted/setup.bash && ros2 topic list"
     ;;
     
   "help"|*)

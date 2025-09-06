@@ -1,4 +1,4 @@
-FROM osrf/ros:humble-desktop-full
+FROM osrf/ros:kilted-desktop-full
 
 # Install additional development tools and UART utilities
 RUN apt-get update && apt-get install -y \
@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
     cmake \
     git \
     libeigen3-dev \
-    libgeographic-dev \
+    libgeographiclib-dev \
     geographiclib-tools \
     nlohmann-json3-dev \
     nano \
@@ -36,7 +36,7 @@ WORKDIR /home/ros_dev
 RUN mkdir -p ros2_ws/src
 
 # Source ROS2 in .bashrc
-RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
+RUN echo "source /opt/ros/kilted/setup.bash" >> ~/.bashrc
 RUN echo "source ~/ros2_ws/install/setup.bash" >> ~/.bashrc
 RUN echo "export ROS_DOMAIN_ID=1" >> ~/.bashrc
 
@@ -47,5 +47,11 @@ WORKDIR /home/ros_dev/ros2_ws
 USER root
 RUN rosdep update
 USER ros_dev
+
+# Copy and build ROS2 workspace
+COPY ros2_ws/src /home/ros_dev/ros2_ws/src
+RUN bash -c "cd /home/ros_dev/ros2_ws && \
+    source /opt/ros/kilted/setup.bash && \
+    colcon build"
 
 CMD ["/bin/bash"]

@@ -1,4 +1,4 @@
-FROM osrf/ros:humble-desktop-full
+FROM osrf/ros:kilted-desktop-full
 
 # Install additional development tools and UART utilities
 RUN apt-get update && apt-get install -y \
@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
     cmake \
     git \
     libeigen3-dev \
-    libgeographic-dev \
+    libgeographiclib-dev \
     geographiclib-tools \
     nlohmann-json3-dev \
     nano \

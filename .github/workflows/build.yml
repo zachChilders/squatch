@@ -1,4 +1,4 @@
-name: Build ESP32-S2 Squatch
+name: Build Squatch
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  build-locale:
     runs-on: ubuntu-latest
     
     steps:
@@ -22,3 +22,13 @@ jobs:
         esp_idf_version: v5.1.2
         target: esp32s2
         path: ./locale
+
+  build-brain:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Build ROS2 Docker Image
+      run: docker build ./brain

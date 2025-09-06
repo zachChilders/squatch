@@ -18,4 +18,4 @@ services:
       - ROS_DOMAIN_ID=1
       - DISPLAY=${DISPLAY}
     working_dir: /home/ros_dev/ros2_ws
-    command: /bin/bash
+    command: bash -c "source /opt/ros/kilted/setup.bash && source ~/ros2_ws/install/setup.bash && ros2 launch squatch_nodes squatch.launch.py"

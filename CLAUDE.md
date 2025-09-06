@@ -4,79 +4,105 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Squatch** is an ESP32-S2 based sensor package that reads IMU (MPU6050) data via I2C and continuously logs accelerometer, gyroscope, and temperature readings. The project uses modern C++23 with std::expected for error handling and is built using the ESP-IDF framework.
+**Squatch** is a dual-component system for sensor fusion and SLAM exploration:
+
+- **Locale**: ESP32 firmware that polls IMU and GNSS sensors, outputting JSON messages via UART/TCP
+- **Brain**: Dockerized ROS2 system that processes sensor data from the ESP32 via TCP bridge
+
+The project combines ESP-IDF/FreeRTOS firmware with ROS2 for integrated sensor data processing and uses QEMU for development/testing without physical hardware.
 
 ## Build Commands
 
+### Integrated Development Workflow (Recommended)
 ```bash
-# Build the project
-idf.py build
+# Complete system startup - ESP32 QEMU + ROS2
+./scripts/dev.sh start-all
 
-# Flash to device
-idf.py flash
+# System status monitoring  
+./scripts/dev.sh status
 
-# Monitor serial output  
-idf.py monitor
+# View ROS2 sensor data
+./scripts/dev.sh ros-topics
 
-# Flash and monitor in one command
-idf.py flash monitor
+# Clean shutdown
+./scripts/dev.sh stop-all
 
-# Clean build
-idf.py clean
-
-# Set target (if needed)
-idf.py set-target esp32s2
+# Help for all available commands
+./scripts/dev.sh help
 ```
 
-Alternative make commands (if IDF_PATH is set):
+### ESP32 Firmware (locale/)
 ```bash
-make
-make flash  
-make monitor
+cd locale/
+
+# Build firmware
+idf.py build
+
+# Flash to hardware
+idf.py flash
+
+# Serial monitoring
+idf.py monitor
+
+# QEMU simulation
+idf.py qemu
+```
+
+### ROS2 Brain System
+```bash
+# Individual ROS2 control
+./scripts/dev.sh ros-build    # Build container
+./scripts/dev.sh ros-up       # Start container  
+./scripts/dev.sh ros-bridge   # Run ESP bridge
+./scripts/dev.sh ros-shell    # Access container
 ```
 
 ## Architecture
 
-The codebase follows a modular structure with header-only implementations:
+### System Components
+- **ESP32 Firmware** (`locale/`): C++23 firmware with IMU/GNSS sensor polling
+- **ROS2 Brain** (`brain/`): Docker container with ESP Bridge Node
+- **TCP Integration**: Port 5555 connects ESP32 QEMU to ROS2 bridge
+- **Development Scripts**: Unified workflow via `scripts/dev.sh`
 
-- **main/main.cpp**: Application entry point with app_main() function
-- **main/imu/**: MPU6050 sensor interface module
-  - **imu.h**: Complete IMU interface with template functions and std::expected error handling
-  - **registers.h**: MPU6050 register definitions
-  - **i2c.h**: I2C communication primitives
+### Code Structure  
+```
+locale/main/           # ESP32 application code
+├── main.cpp          # Application entry point  
+├── imu/              # MPU6050 IMU interface
+├── gnss/             # GNSS module interface
+├── lib/              # Shared libraries (UART, I2C)
+└── logging/          # Structured JSON logging
 
-Key architectural patterns:
-- Modern C++ error handling with `std::expected<T, esp_err_t>`
-- Template functions for type-safe register operations
-- Structured data types (IMUData, AccelData, GyroData) over primitive arrays
-- Header-only implementation for templates and utilities
+brain/ros2_ws/src/squatch_nodes/  # ROS2 integration
+├── src/              # ESP bridge implementation
+└── include/          # ROS2 node headers
+```
 
 ## Code Conventions
 
-- **Language**: C++23 standard
-- **Error Handling**: std::expected pattern - return `std::unexpected(error_code)` on failure
-- **Naming**: snake_case for functions/variables, PascalCase for structs, UPPER_CASE for constants
+- **Language**: C++23 standard with ESP-IDF framework
+- **Error Handling**: `std::expected<T, esp_err_t>` pattern throughout
+- **Naming**: snake_case functions/variables, PascalCase structs, UPPER_CASE constants  
 - **Documentation**: Doxygen-style comments (@brief, @param, @return)
-- **ESP-IDF Integration**: Use ESP_LOGI/ESP_LOGE for logging, ESP_ERROR_CHECK for critical errors
+- **Logging**: ESP_LOGI/ESP_LOGE for ESP32, structured JSON output to TCP
+- **Architecture**: Header-only implementations for templates, modular sensor interfaces
 
 ## Development Environment
 
-- **Target**: ESP32-S2 microcontroller
-- **IDE**: VS Code with ESP-IDF extension
-- **Language Server**: clangd configured for ESP32-S2 toolchain
-- **Simulation**: Wokwi support via wokwi.toml configuration
+- **ESP32 Target**: Configurable (ESP32-S2 default)
+- **Simulation**: QEMU via ESP-IDF with TCP serial output
+- **ROS2**: Dockerized environment with sensor topic processing
+- **Integration**: TCP port 5555 for ESP32 ↔ ROS2 data flow
+- **IDE**: VS Code with ESP-IDF extension, clangd language server
 
 ## Task Completion
 
 For any changes:
-1. Build successfully with `idf.py build`
-2. Check for compilation warnings
-3. Verify clangd static analysis passes
-4. Test with hardware (`idf.py flash monitor`) or Wokwi simulation if possible
-5. Ensure consistent std::expected error handling patterns
-6. Follow project naming and documentation conventions
-## Sessions System Behaviors
-
-@CLAUDE.sessions.md
-- use ./scripts/build.sh to build the project
-- remember how to build the project
+1. Use `./scripts/dev.sh start-all` for integrated testing
+2. Verify ESP32 firmware builds: `cd locale && idf.py build`
+3. Check ROS2 integration: `./scripts/dev.sh ros-topics`
+4. Monitor system status: `./scripts/dev.sh status`  
+5. Ensure proper JSON message format for ESP→ROS2 communication
+6. Follow std::expected error handling patterns in ESP32 code
+7. Test with QEMU simulation before hardware deployment

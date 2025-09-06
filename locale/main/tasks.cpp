@@ -4,7 +4,7 @@ namespace tasks {
 
 static const char *TAG = "TASKS";
 
-// Global queue handle - RAII initialization
+// Global queue handle
 QueuePtr sensor_data_queue{xQueueCreate(QUEUE_LENGTH, sizeof(SensorMessage))};
 
 // Global sensor instances (thread-safe as each task owns its instance)

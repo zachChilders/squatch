@@ -9,6 +9,47 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 TCP_PORT=5555
 
+# Default to mock mode for development
+MOCK_IMU=true
+MOCK_GNSS=true
+
+# Parse mock/hardware arguments
+parse_mock_args() {
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --hardware)
+                MOCK_IMU=false
+                MOCK_GNSS=false
+                shift
+                ;;
+            --real-imu)
+                MOCK_IMU=false
+                shift
+                ;;
+            --real-gnss)
+                MOCK_GNSS=false
+                shift
+                ;;
+            --mock-all)
+                MOCK_IMU=true
+                MOCK_GNSS=true
+                shift
+                ;;
+            --mock-imu)
+                MOCK_IMU=true
+                shift
+                ;;
+            --mock-gnss)
+                MOCK_GNSS=true
+                shift
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
+}
+
 # Global cleanup function
 cleanup() {
     echo "Cleaning up all systems..."
@@ -31,21 +72,25 @@ trap cleanup EXIT
 # ESP-QEMU Management Functions
 esp_start() {
     cd "$PROJECT_ROOT/locale"
-    
+
+    # Set environment variables for mock configuration
+    export ENABLE_IMU_MOCK=$MOCK_IMU
+    export ENABLE_GNSS_MOCK=$MOCK_GNSS
+
     if [ ! -f "build/squatch.bin" ]; then
-        echo "Building ESP project first..."
+        echo "Building ESP project with mock config (IMU: $MOCK_IMU, GNSS: $MOCK_GNSS)..."
         idf.py build
     fi
-    
+
     echo "Starting QEMU with TCP serial on port $TCP_PORT..."
     idf.py qemu --qemu-extra-args="-serial tcp:0.0.0.0:$TCP_PORT,server,nowait" &
     QEMU_PID=$!
     echo "QEMU started (PID: $QEMU_PID)"
-    
+
     # Wait for QEMU to be ready
     sleep 3
     echo "✓ ESP QEMU ready on TCP port $TCP_PORT"
-    
+
     cd "$PROJECT_ROOT"
 }
 
@@ -127,8 +172,12 @@ ros_topics() {
 
 # Integrated Workflow Commands
 start_all() {
+    # Parse mock/hardware arguments
+    parse_mock_args "$@"
+
     echo "🚀 Starting complete ESP-QEMU-ROS2 integration..."
-    
+    echo "Mock configuration: IMU=$MOCK_IMU, GNSS=$MOCK_GNSS"
+
     # Step 1: Start QEMU (non-blocking)
     echo "Step 1/4: Starting ESP32 QEMU..."
     esp_start
@@ -274,7 +323,13 @@ case "${1:-help}" in
         echo "============================================="
         echo ""
         echo "🚀 INTEGRATED COMMANDS (recommended):"
-        echo "  start-all    - Start complete ESP-QEMU-ROS2 integration"
+        echo "  start-all [flags]  - Start complete ESP-QEMU-ROS2 integration"
+        echo "    --hardware       - Use real hardware (disables all mocking)"
+        echo "    --real-imu       - Use real IMU, mock GNSS"
+        echo "    --real-gnss      - Use real GNSS, mock IMU"
+        echo "    --mock-all       - Mock both sensors (default)"
+        echo "    --mock-imu       - Force mock IMU"
+        echo "    --mock-gnss      - Force mock GNSS"
         echo "  stop-all     - Stop all systems"
         echo "  status       - Show status of all components"
         echo ""
